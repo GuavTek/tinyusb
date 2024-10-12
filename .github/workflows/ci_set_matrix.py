@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 
 # toolchain, url
@@ -45,6 +46,7 @@ family_list = {
     "xmc4000": ["arm-gcc"],
     "-bespressif_kaluga_1": ["esp-idf"],
     "-bespressif_s3_devkitm": ["esp-idf"],
+    "-bespressif_p4_function_ev": ["esp-idf"],
 }
 
 
@@ -61,7 +63,7 @@ def set_matrix_json():
             hfp_boards = [f"-b{board['name']}" for board in hfp_data['boards']]
             filtered_families = filtered_families + hfp_boards
 
-        matrix[toolchain] = {"family": filtered_families}
+        matrix[toolchain] = filtered_families
 
     print(json.dumps(matrix))
 
