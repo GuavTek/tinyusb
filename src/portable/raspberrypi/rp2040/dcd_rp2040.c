@@ -506,6 +506,47 @@ void dcd_edpt_close_all(uint8_t rhport) {
   reset_non_control_endpoints();
 }
 
+bool dcd_edpt_iso_alloc(uint8_t rhport, uint8_t ep_addr, uint16_t largest_packet_size) {
+  (void) rhport;
+  hw_endpoint_init(ep_addr, largest_packet_size, TUSB_XFER_ISOCHRONOUS);
+  return true;
+}
+
+bool dcd_edpt_iso_activate(uint8_t rhport, tusb_desc_endpoint_t const *desc_ep) {
+  (void)rhport;
+  uint8_t const ep_addr = desc_ep->bEndpointAddress;
+  uint8_t const num = tu_edpt_number(ep_addr);
+  tusb_dir_t const dir = tu_edpt_dir(ep_addr);
+  struct hw_endpoint* ep = hw_endpoint_get_by_addr(ep_addr);
+
+  ep->ep_addr = ep_addr;
+
+  // For device, IN is a tx transfer and OUT is an rx transfer
+  ep->rx = (dir == TUSB_DIR_OUT);
+
+  ep->next_pid = 0u;
+  ep->wMaxPacketSize = desc_ep->wMaxPacketSize;
+  ep->transfer_type = TUSB_XFER_ISOCHRONOUS;
+
+  // Every endpoint has a buffer control register in dpram
+  if (dir == TUSB_DIR_IN) {
+    ep->buffer_control = &usb_dpram->ep_buf_ctrl[num].in;
+  } else {
+    ep->buffer_control = &usb_dpram->ep_buf_ctrl[num].out;
+  }
+
+  // Clear existing buffer control state
+  *ep->buffer_control = 0;
+
+  // Set the endpoint control register (starts at EP1, hence num-1)
+  if (dir == TUSB_DIR_IN) {
+    ep->endpoint_control = &usb_dpram->ep_ctrl[num - 1].in;
+  } else {
+    ep->endpoint_control = &usb_dpram->ep_ctrl[num - 1].out;
+  }
+  return true;
+}
+
 bool dcd_edpt_xfer(__unused uint8_t rhport, uint8_t ep_addr, uint8_t* buffer, uint16_t total_bytes) {
   assert(rhport == 0);
   hw_endpoint_xfer(ep_addr, buffer, total_bytes);
